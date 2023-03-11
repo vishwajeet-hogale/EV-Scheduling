@@ -60,20 +60,23 @@ EVs = [
 Stations = [
     {
         "station_no" : 1,
-        "demand" : 15,
-        "current_demand" : 0
+        "demand" : 0,
+        "current_demand" : 0,
+        "prev_dept" : -1
 
     },
     {
         "station_no" : 3,
         "demand" : 1,
-        "current_demand" : 0
+        "current_demand" : 0,
+        "prev_dept" : -1
         
     },
     {
         "station_no" : 2,
-        "demand" : 4,
-        "current_demand" : 0
+        "demand" : 3,
+        "current_demand" : 0,
+        "prev_dept" : -1
 
     }
 ]

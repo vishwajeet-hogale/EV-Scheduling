@@ -117,7 +117,8 @@ if __name__ == "__main__":
         new_capacity = float(new_battery_capacity(i["batteryCapacity"],dis_rate))
         i["new_capacity"] = new_capacity
         distanceToEmpty = distance_to_empty(i["usedCapacity"],new_capacity,i["currentDistanceSinceLastCharge"])
-        all_possible_stations = get_all_charging_station_from_source(0,[1,3,2],distanceToEmpty)
+        i["distanceToEmpty"] = distanceToEmpty
+        all_possible_stations = get_all_charging_station_from_source(i["currentNodeLocation"],[1,3,2],distanceToEmpty)
         if len(all_possible_stations) == 0:
             print("EV ",i["ID"]," No charging stations nearby : Not enough charge")
             i["station_assigned"] = -1
@@ -133,10 +134,10 @@ if __name__ == "__main__":
             # station_assigned = 
             if station_assigned == -1:
                 print("EV ",i["ID"]," No charging stations are available")
-                print(all_possible_stations)
+                
                 i["station_assigned"] = -1
                 no_assigned_station_evs.append(i["ID"])
-                demand_full_evs.append(i["ID"])
+                demand_full_evs.append(i)
                 EVs[val] = i
                 continue
             # print("EV ",i["ID"]," : ",station_assigned)
@@ -163,45 +164,93 @@ if __name__ == "__main__":
     Step 3 : if dept < prev_dept :  Perform CaSE I
     Step 4 : else : Case II [arrival_time,dept_time]
     """
+    print("############################")
     EVs = [i for i in EVs if i["ID"] not in no_assigned_station_evs]
     EVs = sorted(EVs,key = lambda x:(x["station_assigned"],x["arrival_time"]))
-    prev_dept = -1
+    Stations[stations_map[i["station_assigned"]]]["prev_dept"] = -1
     for val,i in enumerate(EVs):
         # print(i["arrival_time"])
-        if prev_dept == -1:
+        if Stations[stations_map[i["station_assigned"]]]["prev_dept"] == -1:
             i["time_slot"] = [i["arrival_time"],i["dept_time"]]
-            prev_dept = i["dept_time"]
+            Stations[stations_map[i["station_assigned"]]]["prev_dept"] = i["dept_time"]
             
-        elif i["arrival_time"] < prev_dept :
+        elif i["arrival_time"] < Stations[stations_map[i["station_assigned"]]]["prev_dept"] :
             if len(i["distances"]) > 1 :
                 option_2_station_distance = i["distances"][1][1]
                 time_to_drive_to_option_2 = (option_2_station_distance//60)*60 + option_2_station_distance%60 
-                wait_minutes = abs((prev_dept-i["arrival_time"]).total_seconds())/60
+                wait_minutes = abs((Stations[stations_map[i["station_assigned"]]]["prev_dept"]-i["arrival_time"]).total_seconds())/60
                 if (i["arrival_time"]-i["start_time"]).total_seconds()/60 + wait_minutes > time_to_drive_to_option_2:
                     EVs[val] = preprocess_all_EVs(i,option_2_station_distance)
                     station_assigned = i["distances"][1][0]
                     Stations[stations_map[i["station_assigned"]]]["current_demand"] -= 1
-                    i[station_assigned] = station_assigned
-                    i["time_slot"] = [prev_dept+timedelta(minutes=5),i["dept_time"]]
+                    i["station_assigned"] = station_assigned
+                    i["time_slot"] = [Stations[stations_map[i["station_assigned"]]]["prev_dept"]+timedelta(minutes=5),i["dept_time"]]
                     EVs[val] = i
-            i["time_slot"] = [prev_dept,i["dept_time"]]
+            i["time_slot"] = [Stations[stations_map[i["station_assigned"]]]["prev_dept"],i["dept_time"]]
         else:
             i["time_slot"] = [i["arrival_time"],i["dept_time"]]
-        prev_dept = i["dept_time"]
+        Stations[stations_map[i["station_assigned"]]]["prev_dept"] = i["dept_time"]
         print("EV ",i["ID"]," ",i["station_assigned"],"-> ",time_slot_conversion(i["time_slot"]))
+    demand = 0
+    for val,i in enumerate(demand_full_evs):
+        demand += 1
+        all_possible_stations = get_all_charging_station_from_source(i["currentNodeLocation"],[1,3,2],i["distanceToEmpty"])
+        all_poss = sorted([[i,j] for i,j in all_possible_stations.items()],key=lambda x:x[1])
+        i["station_assigned"] = all_poss[0][0]
+
+        Stations[stations_map[i["station_assigned"]]]["demand"] += 1
+        station_distance_assigned,drive_time = get_closest_station(all_possible_stations,Stations,3)#1
+        Stations[stations_map[i["station_assigned"]]]["current_demand"] += 1
+        # print("EV ",i["ID"]," : ",station_assigned)
+        EVs[val] = i
+        if Stations[stations_map[i["station_assigned"]]]["prev_dept"] == -1:
+            i["time_slot"] = [i["arrival_time"],i["dept_time"]]
+            Stations[stations_map[i["station_assigned"]]]["prev_dept"] = i["dept_time"]
+            
+        elif i["arrival_time"] < Stations[stations_map[i["station_assigned"]]]["prev_dept"] :
+            if len(i["distances"]) > 1 :
+                option_2_station_distance = i["distances"][1][1]
+                time_to_drive_to_option_2 = (option_2_station_distance//60)*60 + option_2_station_distance%60 
+                wait_minutes = abs((Stations[stations_map[i["station_assigned"]]]["prev_dept"]-i["arrival_time"]).total_seconds())/60
+                if (i["arrival_time"]-i["start_time"]).total_seconds()/60 + wait_minutes > time_to_drive_to_option_2:
+                    EVs[val] = preprocess_all_EVs(i,option_2_station_distance)
+                    station_assigned = i["distances"][1][0]
+                    Stations[stations_map[i["station_assigned"]]]["current_demand"] -= 1
+                    i["station_assigned"] = station_assigned
+                    i["time_slot"] = [Stations[stations_map[i["station_assigned"]]]["prev_dept"]+timedelta(minutes=5),i["dept_time"]]
+                    EVs[val] = i
+            i["time_slot"] = [Stations[stations_map[i["station_assigned"]]]["prev_dept"],i["dept_time"]]
+        else:
+            i["time_slot"] = [i["arrival_time"],i["dept_time"]]
+        EVs[val] = i
+        Stations[stations_map[i["station_assigned"]]]["prev_dept"] = i["dept_time"]
+        print("EV ",i["ID"]," ",i["station_assigned"],"-> ",time_slot_conversion(i["time_slot"]))   
+    penalty = 0
+    for val,i in enumerate(Stations):
+        penalty += abs(i["current_demand"] - i["demand"])*5 + demand*10
+    print(penalty)
 
 
-        
 
 
- 
 
 
 
     
 
 
+
     
+
+
+
+
+
+
+
+
+
+
 
 
 
