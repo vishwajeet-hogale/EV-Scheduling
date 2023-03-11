@@ -225,10 +225,13 @@ if __name__ == "__main__":
         EVs[val] = i
         Stations[stations_map[i["station_assigned"]]]["prev_dept"] = i["dept_time"]
         print("EV ",i["ID"]," ",i["station_assigned"],"-> ",time_slot_conversion(i["time_slot"]))   
+    
     penalty = 0
     for val,i in enumerate(Stations):
-        penalty += abs(i["current_demand"] - i["demand"])*5 + demand*10
-    print(penalty)
+        i["penalty"] = abs(i["current_demand"] - i["demand"])*5 + demand*10
+        print(i)   
+
+
 
 
 
