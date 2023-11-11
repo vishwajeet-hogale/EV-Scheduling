@@ -1,5 +1,5 @@
 # EV-Scheduling
-Greedy approach to assign EVs to EV charging stations
+Greedy approach to assign EVs to EV charging stations and efficiently optimize pricing mechanism that benefits EV owners and charging station. 
 ## Project Overview: Electric Vehicle Charging Allocation
 
 This repository addresses the Electric Vehicle (EV) charging allocation problem by providing both offline and online solutions. In this project, EV users are treated as self-interested agents seeking to maximize profit while minimizing schedule impact.
